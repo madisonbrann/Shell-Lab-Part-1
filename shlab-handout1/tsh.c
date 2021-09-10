@@ -116,6 +116,7 @@ void eval(char *cmdline)
 {
     /* */
     pid_t process_id;
+    pid_t first_process_id;
     char *argv[MAXARGS];
     char buf[MAXLINE];
     strcpy(buf,cmdline);
@@ -131,23 +132,51 @@ void eval(char *cmdline)
     int cmds_size = parseargs(argv,cmds,stdin_redir,stdout_redir);
 
     //printf("%d",cmds[1]);
-    printf("%d",cmds_size);
+   // printf("%d",cmds_size);
     for (int i = 0; i < cmds_size; i++)
     {
+        int p[2];
+        pipe(p);
         process_id = fork();
+        if (i == 0)
+            first_process_id = process_id;
 
-        if (process_id > 0)
+        if (process_id > 0) //parent
         {
-            printf("%s","in 0");
+            printf("running: %s\n",argv[cmds[i]]);
+       //    printf("%d\n", stdin_redir[0]);
+        //   printf("%d\n", stdin_redir[1]);
+        //   printf("%d\n", stdout_redir[0]);
+         //  printf("%d\n", stdout_redir[1]);
             int status;
+            if (i == 0)
+            {
+                close(p[0]); //close conditionally
+            }
+            if (i == 1)
+            {
+                close(p[1]);
+            }
             waitpid(process_id,&status,0);
            // printf("%s","0 called");
-            setpgid(0,0);
+            //setpgid(0,0);
+            setpgid(process_id,first_process_id);
         }
-        else
+        else // child
         {
-            printf("%s","in else");
-            printf("running: %s",argv[cmds[i]]);
+            //printf("%s","in else");
+            if (i == 0)
+            {
+                dup2(p[1], STDOUT_FILENO);
+                close(p[0]);
+                close(p[1]);
+            }
+            if (i == 1)
+            {
+                dup2(p[0], STDIN_FILENO);
+                close(p[1]);
+                close(p[0]);
+            }
             if (execve(argv[cmds[i]],argv,environ) < 0)
             {
                 printf("%s: Command not found\n", argv[0]);
