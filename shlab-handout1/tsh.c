@@ -120,15 +120,42 @@ void eval(char *cmdline)
     char buf[MAXLINE];
     strcpy(buf,cmdline);
     parseline(buf,argv);
-    int *cmds;
-    int *stdin_redir;
-    int *stdout_redir;
-    parseargs(argv,cmds,stdin_redir,stdout_redir);
     if (!strcmp(argv[0],"quit"))
     {
         builtin_cmd(argv);
     }
-      
+
+    int cmds[MAXARGS];
+    int stdin_redir[MAXARGS];
+    int stdout_redir[MAXARGS];
+    int cmds_size = parseargs(argv,cmds,stdin_redir,stdout_redir);
+
+    //printf("%d",cmds[1]);
+    printf("%d",cmds_size);
+    for (int i = 0; i < cmds_size; i++)
+    {
+        process_id = fork();
+
+        if (process_id > 0)
+        {
+            printf("%s","in 0");
+            int status;
+            waitpid(process_id,&status,0);
+           // printf("%s","0 called");
+            setpgid(0,0);
+        }
+        else
+        {
+            printf("%s","in else");
+            printf("running: %s",argv[cmds[i]]);
+            if (execve(argv[cmds[i]],argv,environ) < 0)
+            {
+                printf("%s: Command not found\n", argv[0]);
+            }
+        }
+    } 
+
+      /*
     else
     {
         process_id = fork();
@@ -148,9 +175,10 @@ void eval(char *cmdline)
                 printf("%s: Command not found\n", argv[0]);
             }
         }
-        
-
     }
+        */
+
+    
     
     
     
